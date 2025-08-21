@@ -15,3 +15,6 @@ audit:
 unused-dep:
 	cargo +nightly udepsrun:
 	cargo run
+# examples 
+run-tokenization:
+	cargo run --example tokenization
