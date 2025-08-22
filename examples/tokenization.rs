@@ -52,6 +52,9 @@ fn replace_with_trimed_delimeter(txt: &str, re: &regex::Regex) -> String {
 struct SimpleTokenizer<'a> {
     encode_regex: regex::Regex,
     decode_regex: regex::Regex,
+    #[allow(dead_code)]
+    eot_id: usize,
+    unk_id: usize,
     vocab: BTreeSet<&'a str>,
 }
 
@@ -60,14 +63,28 @@ impl<'a> SimpleTokenizer<'a> {
         let encode_regex = regex::Regex::new(r#"([,.:;?_!"()\']|--|\s)"#).expect("Failed to create encode regex");
         let decode_regex = regex::Regex::new(r#"\s+([,.:;?_!"()\'])"#).expect("Failed to create decode regex");
 
-        let mut preprocessed = split_include_delimeter(txt, &encode_regex);
+        let mut vocab_vec = split_include_delimeter(txt, &encode_regex);
+        vocab_vec.push("<|endoftext|>");
+        vocab_vec.push("<|unk|>");
 
-        preprocessed.sort();
+        let vocab = BTreeSet::from_iter(vocab_vec);
 
         Self {
             encode_regex,
             decode_regex,
-            vocab: BTreeSet::from_iter(preprocessed),
+            eot_id: vocab
+                .iter()
+                .enumerate()
+                .find(|(_, vs)| **vs == "<|endoftext|>")
+                .expect("End of text token is missing")
+                .0,
+            unk_id: vocab
+                .iter()
+                .enumerate()
+                .find(|(_, vs)| **vs == "<|unk|>")
+                .expect("Unknown token is missing")
+                .0,
+            vocab,
         }
     }
 
@@ -78,7 +95,7 @@ impl<'a> SimpleTokenizer<'a> {
                 if let Some((idx, _)) = self.vocab.iter().enumerate().find(|(_, vs)| **vs == s) {
                     idx
                 } else {
-                    0
+                    self.unk_id
                 }
             })
             .collect()
@@ -111,4 +128,17 @@ fn main() {
 
     let decoded_txt = tokenizer.decode(ids);
     println!("Decoded Ids: {}", decoded_txt);
+
+    // Unknown check
+
+    let txt_1 = "Hello, do you like tea?";
+    let txt_2 = "Inthe sunlit something of the palace.";
+    let new_txt = format!("{txt_1} <|endoftext|> {txt_2}");
+    println!("predefined token check txt: {new_txt}");
+
+    let new_ids = tokenizer.encode(&new_txt);
+    println!("Some unknow token ids: {:?}", new_ids);
+
+    let new_decoded = tokenizer.decode(new_ids);
+    println!("Some unknow token decoded: {:?}", new_decoded);
 }
