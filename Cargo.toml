@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 regex = "1.11.1"
 tch = { version = "0.20.0", default-features = false, features = ["download-libtorch"] }
+tiktoken-rs = "0.7.0"
